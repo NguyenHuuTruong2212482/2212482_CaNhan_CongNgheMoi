@@ -38,11 +38,16 @@ export default function Header() {
       </Link>
 
       <div className="flex items-center gap-4">
-        <Link href="/cart" className="border px-4 py-2 rounded">
-          Cart
-        </Link>
         {user ? (
           <>
+            <Link href="/cart" className="border px-4 py-2 rounded">
+              Cart
+            </Link>
+
+            <Link href="/profile" className="border px-4 py-2 rounded">
+              Profile
+            </Link>
+
             <p>{user.email}</p>
 
             <button
