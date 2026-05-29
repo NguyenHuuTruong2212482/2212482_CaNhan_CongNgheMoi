@@ -166,7 +166,7 @@ export default function ProductCard({ product }: Props) {
 
   return (
     <>
-      <Link href={`/product/${product.id}`}>
+      <Link href={`/products/${product.id}`}>
         <div className="relative border rounded-xl shadow p-4 hover:shadow-lg transition cursor-pointer">
           <img
             src={product.image}
@@ -182,7 +182,7 @@ export default function ProductCard({ product }: Props) {
               className="w-full mt-3 py-2 bg-blue-600 text-white rounded"
               disabled={product.amount <= 0}
             >
-              {product.amount > 0 ? "Add To Cart" : "Hết hàng"}
+              {product.amount > 0 ? "Thêm vào giỏ" : "Hết hàng"}
             </button>
           )}
 
