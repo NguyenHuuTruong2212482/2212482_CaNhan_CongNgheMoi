@@ -10,5 +10,6 @@ services:
     env_file:
       - .env
     environment:
-      - NODE_ENV=production
+      NEXT_PUBLIC_SUPABASE_URL=https://mepvrcbidodjjgqvbcmi.supabase.co
+      NEXT_PUBLIC_SUPABASE_ANON_KEY=sb_publishable_G7fQNIkyd1EsbjrH1xwGAQ_7v3xMV6i
     restart: unless-stopped
