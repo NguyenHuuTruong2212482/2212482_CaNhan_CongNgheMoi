@@ -7,11 +7,18 @@ import { User } from "@supabase/supabase-js";
 
 export default function Header() {
   const [user, setUser] = useState<User | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
     const getSession = async () => {
       const { data } = await supabase.auth.getSession();
-      setUser(data.session?.user ?? null);
+      const u = data.session?.user ?? null;
+      setUser(u);
+
+      if (u) {
+        const { data: profile } = await supabase.from('profiles').select('role').eq('id', u.id).single();
+        setIsAdmin(profile?.role === 'admin');
+      }
     };
 
     getSession();
@@ -19,7 +26,11 @@ export default function Header() {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
+      const u = session?.user ?? null;
+      setUser(u);
+      if (u) {
+        supabase.from('profiles').select('role').eq('id', u.id).single().then(res => setIsAdmin(res.data?.role === 'admin'));
+      } else setIsAdmin(false);
     });
 
     return () => {
@@ -40,8 +51,8 @@ export default function Header() {
       <div className="flex items-center gap-4">
         {user ? (
           <>
-            <Link href="/cart" className="border px-4 py-2 rounded">
-              Cart
+            <Link href={isAdmin ? "/orders" : "/cart"} className="border px-4 py-2 rounded">
+              {isAdmin ? 'Orders' : 'Cart'}
             </Link>
 
             <Link href="/profile" className="border px-4 py-2 rounded">

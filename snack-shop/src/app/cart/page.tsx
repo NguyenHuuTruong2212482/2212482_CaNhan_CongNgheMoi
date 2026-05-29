@@ -1,41 +1,77 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Product } from "@/types/product";
+import { supabase } from "@/lib/supabase/client";
 
 export default function CartPage() {
   const [cart, setCart] = useState<Product[]>(() => {
     if (typeof window !== "undefined") {
       return JSON.parse(localStorage.getItem("cart") || "[]");
     }
-
     return [];
   });
 
-  // tính tổng tiền
-  const total = cart.reduce((sum, item) => sum + item.price, 0);
+  const total = cart.reduce(
+    (sum, item) => sum + item.price * (item.quantity || 1),
+    0,
+  );
 
-  // xóa sản phẩm
-  const removeItem = (index: number) => {
-    const newCart = [...cart];
-
-    newCart.splice(index, 1);
-
+  const save = (newCart: Product[]) => {
     setCart(newCart);
-
     localStorage.setItem("cart", JSON.stringify(newCart));
   };
 
-  // thanh toán
-  const handleCheckout = () => {
+  const removeItem = (index: number) => {
+    const newCart = [...cart];
+    newCart.splice(index, 1);
+    save(newCart);
+  };
+
+  const updateQty = (index: number, qty: number) => {
+    if (qty < 1) return;
+    const newCart = [...cart];
+    const item = newCart[index];
+    const max = item.amount ?? Infinity;
+    if (qty > max) {
+      alert("Không đủ hàng trong kho");
+      return;
+    }
+    item.quantity = qty;
+    save(newCart);
+  };
+
+  const router = useRouter();
+
+  const handleCheckout = async () => {
     if (cart.length === 0) return;
 
-    alert(`Thanh toán thành công!\nTổng tiền: ${total.toLocaleString()} VNĐ`);
+    // ensure user is authenticated
+    const { data: sessionData } = await supabase.auth.getSession();
+    const session = sessionData?.session;
+    if (!session) {
+      alert("Vui lòng đăng nhập để thanh toán");
+      router.push("/login");
+      return;
+    }
 
-    // clear cart
-    setCart([]);
+    // chuẩn bị payload: [{id, qty}, ...]
+    const itemsForRpc = cart.map((i) => ({ id: Number(i.id), qty: Number(i.quantity || 1) }));
+
+    // gọi RPC tạo order (tạo order + items + trừ tồn trong 1 transaction)
+    const { data, error } = await supabase.rpc("create_order_from_cart", { items: itemsForRpc });
+    if (error) {
+      alert("Thanh toán lỗi: " + error.message);
+      return;
+    }
+
+    // data là order_id trả về từ function
+    alert(`Thanh toán thành công! Mã đơn: ${data}`);
+    save([]);
     localStorage.removeItem("cart");
   };
+
   return (
     <div className="p-10">
       <h1 className="text-4xl font-bold mb-8">Shopping Cart</h1>
@@ -58,10 +94,31 @@ export default function CartPage() {
 
                 <div className="flex-1">
                   <h2 className="text-xl font-bold">{item.name}</h2>
-
                   <p className="text-gray-500">
                     {item.price.toLocaleString()} VNĐ
                   </p>
+                  <p className="text-sm text-gray-600">
+                    Còn: {item.amount ?? "-"}
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => updateQty(index, (item.quantity || 1) - 1)}
+                    className="px-3 py-1 bg-gray-200 rounded text-gray-700"
+                  >
+                    -
+                  </button>
+
+                  <span className="px-3">{item.quantity || 1}</span>
+
+                  <button
+                    onClick={() => updateQty(index, (item.quantity || 1) + 1)}
+                    className="px-3 py-1 bg-gray-200 rounded text-gray-700"
+                    disabled={(item.quantity || 1) >= (item.amount ?? Infinity)}
+                  >
+                    +
+                  </button>
                 </div>
 
                 <button
